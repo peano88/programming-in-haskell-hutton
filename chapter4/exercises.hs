@@ -62,4 +62,4 @@ luhnDouble :: Int -> Int
 luhnDouble = (`mod` 9) . (*2)
 
 luhn :: Int -> Int -> Int -> Int -> Bool 
-luhn _ x y z = (luhnDouble x + luhnDouble y + luhnDouble z) `mod` 10 == 0
+luhn x y z w = (luhnDouble x + y + luhnDouble z + w) `mod` 10 == 0

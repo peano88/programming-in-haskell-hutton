@@ -1,3 +1,7 @@
+module Examples 
+where
+
+
 import Data.Char
 import Data.List (sort)
 
@@ -29,11 +33,11 @@ chop8 bits = take 8 bits : chop8 (drop 8 bits)
 decode :: [Bit] -> String
 decode = map (chr . bin2int) . chop8
 
-channel :: [Bit] -> [Bit]
-channel = id
+dummychannel :: [Bit] -> [Bit]
+dummychannel = id
 
-transmit :: String -> String
-transmit = decode . channel . encode
+transmit :: ([Bit] -> [Bit]) -> String -> String
+transmit channel = decode . channel . encode
 
 -- First past the post
 count :: Eq a => a -> [a] -> Int
