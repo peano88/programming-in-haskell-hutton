@@ -57,3 +57,5 @@ eval = folde id (+)
 
 size :: Expr -> Int
 size = folde (const 1) (+)
+
+
