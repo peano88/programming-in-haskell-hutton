@@ -1,6 +1,8 @@
 module Countdown where
 
-data Op = Add | Sub | Mul | Div | Exp
+import Data.List (sortBy)
+
+data Op = Exp | Div | Mul | Sub | Add deriving (Eq, Ord)
 
 instance Show Op where
   show Add = "+"
@@ -30,13 +32,13 @@ apply Exp x y = x ^ y
 -- int overflow --> <0
 protectOverflow :: Int -> [Int]
 protectOverflow n
- | n <= 0 = []
- | otherwise = [n]
+  | n <= 0 = []
+  | otherwise = [n]
 
 ops :: [Op]
 ops = [Add, Sub, Mul, Div, Exp]
 
-data Expr = Val Int | App Op Expr Expr
+data Expr = Val Int | App Op Expr Expr deriving (Eq)
 
 instance Show Expr where
   show (Val x) = show x
@@ -45,8 +47,20 @@ instance Show Expr where
       brak (Val n) = show n
       brak e = "(" ++ show e ++ ")"
 
+instance Ord Expr where
+   compare (Val n) e = case e of 
+      (Val m) -> compare n m
+      _ -> GT
+   compare (App op l r) e = case e of
+     (Val n) -> LT
+     (App op' l' r') -> if compare op op' == EQ then 
+                          if compare l l' == EQ then compare r r' 
+                          else compare l l' 
+                        else compare op op'
+
 values :: Expr -> [Int]
 values (Val x) = [x]
+
 value (App _ x y) = values x ++ values y
 
 eval :: Expr -> [Int]
@@ -55,15 +69,15 @@ eval (App op l r) = [a | x <- eval l, y <- eval r, valid op x y, a <- protectOve
 
 subs :: [a] -> [[a]]
 subs [] = [[]]
-subs (x:xs) = yss ++ map (x:) yss where yss = subs xs
+subs (x : xs) = yss ++ map (x :) yss where yss = subs xs
 
 interleave :: a -> [a] -> [[a]]
 interleave x [] = [[x]]
-interleave x (y:ys) = (x:y:ys): map (y:)  (interleave x ys)
+interleave x (y : ys) = (x : y : ys) : map (y :) (interleave x ys)
 
 perms :: [a] -> [[a]]
 perms [] = [[]]
-perms (x:xs) = concat (map (interleave x) (perms xs))
+perms (x : xs) = concat (map (interleave x) (perms xs))
 
 choices :: [a] -> [[a]]
 choices = concat . map perms . subs
@@ -71,10 +85,10 @@ choices = concat . map perms . subs
 solution :: Expr -> [Int] -> Int -> Bool
 solution e ns n = elem (values e) (choices ns) && eval e == [n]
 
-split :: [a] -> [([a],[a])]
+split :: [a] -> [([a], [a])]
 split [] = []
 split [_] = []
-split (x:xs) = ([x],xs):[(x:ls,rs)| (ls, rs) <- split xs]
+split (x : xs) = ([x], xs) : [(x : ls, rs) | (ls, rs) <- split xs]
 
 combine :: Expr -> Expr -> [Expr]
 combine l r = [App o l r | o <- ops]
@@ -82,29 +96,34 @@ combine l r = [App o l r | o <- ops]
 exprs :: [Int] -> [Expr]
 exprs [] = []
 exprs [n] = [Val n]
-exprs ns = [e | (ls,rs) <- split ns
-                ,l <- exprs ls
-                ,r <- exprs rs
-                ,e <- combine l r]
+exprs ns =
+  [ e | (ls, rs) <- split ns, l <- exprs ls, r <- exprs rs, e <- combine l r
+  ]
 
 -- brute force solution
 solutions :: [Int] -> Int -> [Expr]
-solutions ns n =[e | ns' <- choices ns, e <- exprs ns', eval e == [n]]
+solutions ns n = [e | ns' <- choices ns, e <- exprs ns', eval e == [n]]
 
 -- Refining
 
 type Result = (Expr, Int)
 
 combine' :: Result -> Result -> [Result]
-combine' (l,x) (r,y) = [(App o l r, a) | o <- ops, valid o x y, a <- protectOverflow (apply o x y)] 
+combine' (l, x) (r, y) = [(App o l r, a) | o <- ops, valid o x y, a <- protectOverflow (apply o x y)]
 
 results :: [Int] -> [Result]
 results [] = []
-results [n] = [(Val n, n)| n > 0] -- instead of using maybe
-results ns = [res | (ls,rs) <- split ns
-                    ,lx <- results ls
-                    ,ry <- results rs
-                    ,res <- combine' lx ry]
+results [n] = [(Val n, n) | n > 0] -- instead of using maybe
+results ns =
+  [ res | (ls, rs) <- split ns, lx <- results ls, ry <- results rs, res <- combine' lx ry
+  ]
 
 solutions' :: [Int] -> Int -> [Expr]
-solutions' ns n =[e | ns' <- choices ns, (e,m) <- results ns', m == n]
+solutions' ns n = [e | ns' <- choices ns, (e, m) <- results ns', m == n]
+
+solutionsTolerance :: [Int] -> Int -> Int -> [Expr]
+solutionsTolerance ns n t = map fst . sortBy difference $ sols
+  where
+    sols = [(e, m) | ns' <- choices ns, (e, m) <- results ns', abs (m - n) <= t] -- should probably sort by distance from target
+    difference (_, m1) (_, m2) = compare m1 m2
+
