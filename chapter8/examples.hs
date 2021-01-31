@@ -49,4 +49,31 @@ substs p = map (zip vs) (bools (length vs))
     vs = rmdups (vars p)
 
 isTaut :: Prop -> Bool
-isTaut p = and [eval s p | s <- substs p]    
+isTaut p = and [eval s p | s <- substs p]
+
+-- Abstract Machine ---
+
+data Expr = Val Int | Add Expr Expr | Mult Expr Expr
+
+value :: Expr -> Int
+value (Val x) = x
+value (Add e f) = value e + value f
+value (Mult e f) = value e * value f
+
+data Op = EVAL Expr | ADD Int | MULT Int
+
+type Cont = [Op]
+
+exec :: Cont -> Int -> Int
+exec [] n = n
+exec (EVAL x : c) n = evalM x (ADD n : c)
+exec (ADD x : c) n = exec c (x + n)
+exec (MULT x : c) n = exec c (x * n)
+
+evalM :: Expr -> Cont -> Int
+evalM (Val x) c = exec c x
+evalM (Add x y) c = evalM x (ADD (evalM y []) : c) -- in this case the exec with EVAL is no longer needed
+evalM (Mult x y) c = evalM x (MULT (evalM y []) : c)
+
+valueM :: Expr -> Int
+valueM e = evalM e []
