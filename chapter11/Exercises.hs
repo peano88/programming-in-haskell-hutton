@@ -41,3 +41,54 @@ sizeSelection = do
           sizeSelection
      else
           return n                 
+
+keepSubtree :: Eq a => a -> Tree a -> [Tree a]
+keepSubtree y (Node x ts) 
+     | x == y = [Node x ts]
+     | otherwise = concat (map (keepSubtree y) ts)
+
+pruneTree :: Tree a -> Tree a
+pruneTree (Node x _) = Node x []
+
+bestmoves' :: Grid -> Player -> Player-> Tree Grid -> [Grid]
+bestmoves' g p starter gameTree = [g'| Node (g',p') _ <- ts', p' == best]
+     where
+        tree = head (keepSubtree g gameTree)
+        Node (_,best) ts = minimax tree starter
+        --ts' = sortBy smallerDepth ts
+        ts' = ts
+
+data AlphaBeta a = UnsetLow | Set a | UnsetHigh deriving (Eq,Ord)
+
+evalAlpha :: Ord a => AlphaBeta a -> a -> AlphaBeta a
+evalAlpha (UnsetLow) b = Set b
+evalAlpha (Set a) b = Set (max a b)
+
+evalBeta :: Ord a => AlphaBeta a -> a -> AlphaBeta a
+evalBeta (UnsetHigh) b = Set b
+evalBeta (Set a) b = Set (min a b)
+
+
+
+step :: Ord b => Tree a -> (a ->b) -> Bool -> AlphaBeta b -> AlphaBeta b -> (Tree (a,b), AlphaBeta b, AlphaBeta b)
+step (Node x ts) evaluate maximizing alpha beta = (Node (x, gain) explored, alpha', beta')
+     where
+          explore _ _ _ _ [] = [] 
+          explore evaluate maximizing alpha beta (t':ts')
+               | beta <= alpha = []
+               | otherwise = let (y, alpha'', beta'') = step t' evaluate maximizing alpha beta in y:(explore evaluate maximizing alpha'' beta'' ts')
+          explored = explore evaluate (not maximizing) alpha beta ts
+          gain 
+               | maximizing = if (null explored) then evaluate x else maximum [p| (Node (_,p) _) <- explored]
+               | otherwise = if (null explored) then evaluate x else minimum [p| (Node (_,p) _) <- explored]
+          alpha' = if maximizing then evalAlpha alpha gain else alpha
+          beta' = if not maximizing then evalBeta beta gain else beta
+
+alphabeta :: Ord b => Tree a -> (a->b) -> Bool -> Tree (a,b)
+alphabeta x evaluate maximizing = let (y,_,_) = step x evaluate maximizing (UnsetLow) (UnsetHigh) in y
+
+showT (Node x ts) = "Node" ++ show x ++ "[" ++ concat (map showT ts) ++ "]"
+
+-- >>> do putStr $ showTree (alphabeta (Node 1 [Node 3 [Node 7 [], Node 5 []], Node 3 [Node 8 [], Node 5 []]])) id False 
+
+-- >>> do putStr $ showTree (alphabeta (Node 1 [Node 3 [Node 7 [], Node 5 []], Node 3 [Node 8 [], Node 5 []]])) id True

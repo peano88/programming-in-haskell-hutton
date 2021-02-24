@@ -30,8 +30,8 @@ run' g p
 tictactoe :: IO ()
 tictactoe = run (empty 3) O
 
-play' :: Grid -> Player -> ([Grid] -> IO Grid) -> Player -> IO ()
-play' g p selector starter
+play' :: Grid -> Player -> ([Grid] -> IO Grid) -> Player -> Tree Grid -> IO ()
+play' g p selector starter gameTree
     | wins O g = putStrLn "Player O wins!"
     | wins X g = putStrLn "Player X wins!"
     | full g = putStrLn "it's a draw!"
@@ -40,20 +40,20 @@ play' g p selector starter
         case move g i p of
             [] -> do 
                     putStrLn "ERROR: Invalid move"
-                    play' g p selector starter
-            [g'] -> play g' (next p) selector starter
+                    play' g p selector starter gameTree
+            [g'] -> play g' (next p) selector starter gameTree
     | p == X = do
         putStrLn "Player X is thinking"
-        let gs = bestmoves g p starter
+        let gs = bestmoves' g p starter gameTree
         move <- selector gs
-        play move (next p) selector starter           
+        play move (next p) selector starter gameTree           
 
-play ::Grid -> Player -> ([Grid] -> IO Grid) -> Player -> IO ()
-play g p selector starter = do 
+play ::Grid -> Player -> ([Grid] -> IO Grid) -> Player -> Tree Grid -> IO ()
+play g p selector starter gameTree = do 
     cls
     goto (1,1)
     putGrid g
-    play' g p selector starter
+    play' g p selector starter gameTree
 
 
 headSelector :: [Grid] -> IO Grid
@@ -63,6 +63,7 @@ main :: IO ()
 main = do
     hSetBuffering stdout NoBuffering
     size <- sizeSelection
-    p <- turnSelection 
-    play (empty size) p headSelector p
+    p <- turnSelection
+    let start = empty size 
+    play start p headSelector p (gametree start p)
     --play empty O randomSelector
