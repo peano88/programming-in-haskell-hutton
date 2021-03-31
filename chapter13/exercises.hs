@@ -20,8 +20,7 @@ sumParser = do
   l <- prodParser
   do
       symbol "+"
-      r <- sumParser
-      return (Sum l r)
+      Sum l <$> sumParser
     <|> return l
 
 prodParser :: Parser ArithmExpression
@@ -29,8 +28,7 @@ prodParser = do
   l <- factorParser
   do
       symbol "*"
-      r <- prodParser
-      return (Prod l r)
+      Prod l <$> prodParser
     <|> return l
 
 factorParser :: Parser ArithmExpression
@@ -40,9 +38,8 @@ factorParser =
       v <- sumParser
       symbol ")"
       return (Brackets v)
-    <|> do
-          n <- natural
-          return (Simple n)
+    <|> do Simple <$> natural
+
 
 parseEval :: String -> Int
 parseEval xs = case parse sumParser xs of
