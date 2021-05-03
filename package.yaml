@@ -1,0 +1,37 @@
+name:                programming-haskell-hutton
+version:             0.1.0.0
+github:              "peano88/programming-in-haskell-hutton"
+license:             BSD3
+author:              "peano88"
+maintainer:          "ilpeano@gmail.com"
+copyright:           "2021 peano88"
+
+extra-source-files:
+- README.md
+
+# Metadata used when publishing your package
+# synopsis:            Short description of your package
+# category:            Web
+
+# To avoid duplicated efforts in documentation and dealing with the
+# complications of embedding Haddock markup inside cabal files, it is
+# common to point users to the README.md file.
+description:         Please see the README on GitHub at <https://github.com/peano88/programming-in-haskell-hutton#readme>
+
+dependencies:
+- base >= 4.7 && < 5
+- random
+
+library:
+  source-dirs: src
+
+executables:
+  chapter9-exe:
+    main:                Main.hs
+    source-dirs:         ExecChapter9
+    ghc-options:
+    - -threaded
+    - -rtsopts
+    - -with-rtsopts=-N
+    dependencies:
+    - programming-haskell-hutton
